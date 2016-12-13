@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Implements deep maximum entropy inverse reinforcement learning based on
 Ziebart et al., 2008 and Wulfmeier et al., 2015, using symbolic methods with
@@ -243,14 +244,14 @@ def irl(structure, feature_matrix, n_actions, discount, transition_probability,
         biases.append(matrix)
         hist_b_grads.append(th.shared(np.zeros(shape), name="hdb", borrow=True))
 
-    # Initialise α weight, β bias.
+    # Initialise a weight, b bias.
     if initialisation == "normal":
-        α = th.shared(rn.normal(size=(1, structure[-1])), name="alpha",
+        a = th.shared(rn.normal(size=(1, structure[-1])), name="alpha",
                       borrow=True)
     else:
-        α = th.shared(rn.uniform(size=(1, structure[-1])), name="alpha",
+        a = th.shared(rn.uniform(size=(1, structure[-1])), name="alpha",
                       borrow=True)
-    hist_α_grad = T.zeros(α.shape)  # For AdaGrad.
+    hist_a_grad = T.zeros(a.shape)  # For AdaGrad.
 
     adagrad_epsilon = 1e-6  # AdaGrad numerical stability.
 
@@ -260,15 +261,15 @@ def irl(structure, feature_matrix, n_actions, discount, transition_probability,
     s_feature_matrix = T.matrix("x")
     # Feature matrices.
     # All dimensions of the form (d_layer, n_states).
-    φs = [s_feature_matrix.T]
+    fis = [s_feature_matrix.T]
     # Forward propagation.
     for W, b in zip(weights, biases):
-        φ = T.nnet.sigmoid(th.compile.ops.Rebroadcast((0, False), (1, True))(b)
-                           + W.dot(φs[-1]))
-        φs.append(φ)
+        fi = T.nnet.sigmoid(th.compile.ops.Rebroadcast((0, False), (1, True))(b)
+                           + W.dot(fis[-1]))
+        fis.append(fi)
         # φs[1] = φ1 etc.
     # Reward.
-    r = α.dot(φs[-1]).reshape((n_states,))
+    r = a.dot(fis[-1]).reshape((n_states,))
     # Engineering hack: z-score the reward.
     r = (r - r.mean())/r.std()
     # Associated feature expectations.
@@ -279,10 +280,10 @@ def irl(structure, feature_matrix, n_actions, discount, transition_probability,
     svf = maxent.find_svf(n_states, trajectories.get_value())
     # Derivatives (backward propagation).
     updates = []
-    α_grad = φs[-1].dot(svf - expected_svf).T
-    hist_α_grad += α_grad**2
-    adj_α_grad = α_grad/(adagrad_epsilon + T.sqrt(hist_α_grad))
-    updates.append((α, α + adj_α_grad*learning_rate))
+    a_grad = fis[-1].dot(svf - expected_svf).T
+    hist_a_grad += a_grad**2
+    adj_a_grad = a_grad/(adagrad_epsilon + T.sqrt(hist_a_grad))
+    updates.append((a, a + adj_a_grad*learning_rate))
 
     def grad_for_state(s, theta, svf_diff, r):
         """

@@ -53,7 +53,7 @@ class Objectworld(Gridworld):
         -> Objectworld
         """
 
-        super().__init__(grid_size, wind, discount)
+        super(Objectworld, self).__init__(grid_size, wind, discount)
 
         self.actions = ((1, 0), (0, 1), (-1, 0), (0, -1), (0, 0))
         self.n_actions = len(self.actions)
@@ -196,7 +196,7 @@ class Objectworld(Gridworld):
         -> [[(state int, action int, reward float)]]
         """
 
-        return super().generate_trajectories(n_trajectories, trajectory_length,
+        return super(Objectworld, self).generate_trajectories(n_trajectories, trajectory_length,
                                              policy,
                                              True)
 
